@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>م / أحمد سامي</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background-color: #f0f0f0;
+            color: #333;
+            height: 100vh;
+            margin: 0;
+            padding: 20px;
+            background-image: linear-gradient(135deg, #f3f4f6, #e2e8f0);
+            position: relative;
+            overflow: hidden;
+        }
+        h1 {
+            color: #4CAF50;
+            margin-bottom: 20px;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.2);
+        }
+        button {
+            margin: 5px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            padding: 5px 10px; /* تصغير حجم الأزرار */
+            font-size: 14px; /* تصغير حجم النص في الأزرار */
+            transition: background-color 0.3s;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        #videoList {
+            list-style-type: none;
+            padding: 0;
+            width: 100%;
+            max-width: 600px; /* زيادة عرض القائمة */
+            margin: 20px 0;
+        }
+        #videoList li {
+            padding: 15px;
+            background-color: #ffffff;
+            margin-bottom: 10px;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            position: relative;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        #videoList li button.delete {
+            background-color: red;
+            border-radius: 50%;
+            width: 25px; /* تصغير زر الحذف */
+            height: 25px; /* تصغير زر الحذف */
+            color: white;
+            font-size: 16px; /* تصغير نص زر الحذف */
+            cursor: pointer;
+            border: none;
+        }
+        .videoPlayerContainer {
+            display: none;
+            margin-top: 10px;
+            border: 2px solid #4CAF50;
+            border-radius: 5px;
+            overflow: hidden;
+        }
+        iframe, video {
+            width: 100%; /* جعل الفيديو يتناسب مع عرض المستطيل */
+            height: 400px; /* زيادة ارتفاع الفيديو */
+        }
+    </style>
+</head>
+<body>
+    <h1>م / أحمد سامي</h1>
+    <ul id="videoList"></ul>
+    <button onclick="promptPassword()">+</button>
+    <script>
+        let videos = JSON.parse(localStorage.getItem("videos")) || []; // استرجاع الفيديوهات من localStorage
+
+        function promptPassword() {
+            const password = prompt("Enter the master password to add a video:");
+            if (password === "01007824213") {
+                addVideo();
+            } else {
+                alert("Incorrect password!");
+            }
+        }
+
+        function addVideo() {
+            const title = prompt("Enter video title:");
+            const url = prompt("Enter video URL (YouTube link or direct MP4 link):");
+            const videoPassword = prompt("Enter password for this video:");
+
+            if (title && url && videoPassword) {
+                videos.push({ title, url, password: videoPassword });
+                localStorage.setItem("videos", JSON.stringify(videos)); // حفظ الفيديوهات في localStorage
+                updateVideoList();
+                alert("Video added successfully!");
+            } else {
+                alert("Please provide title, URL, and password.");
+            }
+        }
+
+        function updateVideoList() {
+            const videoList = document.getElementById("videoList");
+            videoList.innerHTML = "";
+
+            videos.forEach(video => {
+                const li = document.createElement("li");
+                li.textContent = video.title;
+
+                // زر للمشاهدة
+                const watchButton = document.createElement("button");
+                watchButton.textContent = "Watch";
+                watchButton.onclick = function() {
+                    checkVideoPassword(video.password, video.title, video.url, li);
+                };
+                li.appendChild(watchButton);
+
+                // زر للإخفاء
+                const toggleButton = document.createElement("button");
+                toggleButton.textContent = "Toggle Video";
+                toggleButton.onclick = function() {
+                    toggleVideoVisibility(li.querySelector('.videoPlayerContainer'));
+                };
+                li.appendChild(toggleButton);
+
+                // زر الحذف
+                const deleteButton = document.createElement("button");
+                deleteButton.textContent = "-"; // علامة الحذف
+                deleteButton.className = "delete";
+                deleteButton.onclick = function() {
+                    confirmDelete(video.title);
+                };
+
+                li.appendChild(deleteButton);
+
+                // عنصر مشغل الفيديو
+                const videoContainer = document.createElement("div");
+                videoContainer.className = "videoPlayerContainer";
+
+                if (video.url.includes("youtube.com")) {
+                    // إذا كان الرابط من اليوتيوب
+                    const videoId = new URL(video.url).searchParams.get("v"); // استخراج ID الفيديو
+                    const iframe = document.createElement("iframe");
+                    iframe.src = `https://www.youtube.com/embed/${videoId}?enablejsapi=1&fullscreen=1`; // استخدام رابط embed مع إمكانية الملء الكامل
+                    iframe.frameBorder = "0";
+                    iframe.allow = "fullscreen"; // السماح بالملء الكامل
+                    videoContainer.appendChild(iframe);
+                } else {
+                    // إذا كان الرابط مباشر
+                    const videoPlayer = document.createElement("video");
+                    const source = document.createElement("source");
+                    source.src = video.url;
+                    source.type = "video/mp4";
+                    videoPlayer.appendChild(source);
+                    videoPlayer.controls = true; // إضافة عناصر التحكم في المشغل
+                    videoContainer.appendChild(videoPlayer);
+                }
+
+                li.appendChild(videoContainer);
+                videoList.appendChild(li);
+            });
+        }
+
+        function checkVideoPassword(videoPassword, title, url, li) {
+            const inputPassword = prompt(`Enter password for "${title}":`);
+            if (inputPassword === videoPassword) {
+                alert(`Access granted! You can watch the video: ${title}`);
+                loadVideo(url, li);
+            } else {
+                alert("Incorrect password!");
+            }
+        }
+
+        function loadVideo(url, li) {
+            const videoContainer = li.querySelector('.videoPlayerContainer');
+            videoContainer.style.display = "block"; // إظهار الفيديو
+        }
+
+        function toggleVideoVisibility(videoContainer) {
+            if (videoContainer.style.display === "none" || videoContainer.style.display === "") {
+                videoContainer.style.display = "block"; // إظهار الفيديو
+            } else {
+                videoContainer.style.display = "none"; // إخفاء الفيديو
+            }
+        }
+
+        function confirmDelete(title) {
+            const password = prompt("Enter the master password to delete this video:");
+            if (password === "01007824213") {
+                deleteVideo(title);
+            } else {
+                alert("Incorrect password!");
+            }
+        }
+
+        function deleteVideo(title) {
+            const index = videos.findIndex(video => video.title === title);
+            if (index !== -1) {
+                videos.splice(index, 1);
+                localStorage.setItem("videos", JSON.stringify(videos)); // تحديث localStorage
+                updateVideoList();
+                alert("Video deleted successfully!");
+            }
+        }
+
+        // تحديث القائمة عند تحميل الصفحة
+        updateVideoList();
+    </script>
+</body>
+</html>
